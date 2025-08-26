@@ -3,10 +3,10 @@
   "short_name": "Checklist",
   "description": "App para registro de pruebas de alarma de incendios.",
   "id": "/",
-  "start_url": "nuevo13.html",
+  "start_url": "/nuevo13.html",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#667eea",
+  "theme_color": "#ff6b6b",
   "icons": [
     {
       "src": "images/icon-192x192.png",
