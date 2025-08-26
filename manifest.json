@@ -1,0 +1,28 @@
+{
+  "name": "CHECK LIST DE SIRENAS Y BOCINAS",
+  "short_name": "Checklist",
+  "description": "App para registro de pruebas de alarma de incendios.",
+  "id": "/",
+  "start_url": "nuevo13.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#667eea",
+  "icons": [
+    {
+      "src": "images/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "images/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "images/icon-512x512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

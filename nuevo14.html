@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHECK LIST DE SIRENAS Y BOCINAS</title>
+    <meta name="description" content="App para registro de pruebas de alarma de incendios.">
+    <meta name="theme-color" content="#ff6b6b">
+	<link rel="manifest" href="manifest.json">
+    
+    <style>
+        :root {
+            --primary-grad: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --accent-grad: linear-gradient(135deg, #ff6b6b, #ee5a24);
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0; padding: 10px;
+            background: var(--primary-grad);
+            min-height: 100vh; font-size: 12px;
+        }
+        
+        /* Ventana de Inicio */
+        .startup-modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 3000;
+            transition: opacity 0.3s ease;
+        }
+        .startup-modal {
+            background: white; border-radius: 20px;
+            padding: 25px; width: 90%; max-width: 400px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        .startup-modal h2 { margin: 0 0 15px 0; text-align: center; }
+        .startup-modal .form-field { margin-bottom: 15px; }
+        .startup-modal .mode-selection h3 { font-size: 14px; margin: 0 0 10px 0; text-align: center; }
+        .startup-modal .mode-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .startup-modal .btn { width: 100%; justify-content: center; }
+        #app-container { display: none; } /* Oculto al inicio */
+
+        .app-container { max-width: 100%; margin: 0 auto; }
+        .header {
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
+            padding: 15px; border-radius: 15px; margin-bottom: 15px;
+            text-align: center; box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+        .header h1 { margin: 0 0 8px 0; color: #333; font-size: 18px; font-weight: 700; }
+        .header h2 { margin: 0; color: #666; font-size: 13px; font-weight: 400; }
+        .info-section {
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
+            padding: 15px; border-radius: 15px; margin-bottom: 15px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+        .form-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+        }
+        .form-field { display: flex; flex-direction: column; }
+        .form-field label { font-weight: 600; margin-bottom: 5px; color: #333; font-size: 11px; }
+        .form-field input {
+            padding: 8px 12px; border: 2px solid #e1e5e9; border-radius: 8px;
+            font-size: 12px; transition: all 0.3s ease; background: rgba(255, 255, 255, 0.8);
+        }
+        .form-field input:focus {
+            outline: none; border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        .controls { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .btn {
+            padding: 12px 20px; border: none; border-radius: 10px;
+            font-size: 14px; font-weight: 600; cursor: pointer;
+            transition: all 0.3s ease; display: flex; align-items: center; gap: 8px;
+        }
+        .btn-primary { background: var(--primary-grad); color: white; }
+        .btn-secondary { background: rgba(255, 255, 255, 0.9); color: #333; border: 2px solid #e1e5e9; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15); }
+        .btn:active { transform: translateY(0); }
+        
+        .table-container {
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
+            border-radius: 15px; overflow: hidden; box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            overflow-x: auto;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 10px; min-width: 800px; table-layout: fixed; }
+        th, td { border-right: 1px solid rgba(0,0,0,0.05); }
+
+        /* AJUSTE DE ANCHO DE COLUMNAS */
+        .col-numero { width: 60px; }
+        .col-piso { width: 150px; }
+        .col-observaciones { width: 300px; }
+        .col-checklist { width: 80px; }
+        
+        th {
+            background: var(--accent-grad); color: white;
+            padding: 12px 6px; text-align: center; font-weight: 600; font-size: 9px;
+        }
+        td {
+            padding: 10px 6px; text-align: center; border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            transition: background-color 0.2s ease;
+            word-wrap: break-word;
+        }
+        td.sortable-handle { cursor: grab; user-select: none; }
+        td.sortable-handle:active { cursor: grabbing; }
+        .sortable-chosen, .sortable-ghost { opacity: 0.5; background: rgba(102, 126, 234, 0.2); }
+        tr:hover { background-color: rgba(102, 126, 234, 0.05); }
+        .piso-activado { background: linear-gradient(135deg, #ffd93d, #ff6b6b) !important; color: white; font-weight: 700; }
+        .n-prueba { background: linear-gradient(135deg, #6c5ce7, #a29bfe); color: white; font-weight: 600; }
+        .checkbox-cell { width: 50px; padding: 8px 4px; }
+        .checkbox-cell input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: #667eea; }
+        .observaciones-cell input {
+            width: 100%; border: none; background: transparent; font-size: 10px;
+            text-align: left; padding: 4px; border-radius: 4px;
+            transition: background-color 0.2s ease;
+        }
+        .observaciones-cell input:focus { background: rgba(102, 126, 234, 0.1); outline: none; }
+        
+        .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;z-index:2000;opacity:0;visibility:hidden;transition:all .3s ease}.modal-overlay.show{opacity:1;visibility:visible;display:flex}.modal{background:rgba(255,255,255,.95);backdrop-filter:blur(20px);border-radius:20px;box-shadow:0 20px 40px rgba(0,0,0,.3);max-width:90vw;max-height:90vh;width:600px;overflow:hidden;transform:scale(.8);transition:transform .3s ease}.modal-overlay.show .modal{transform:scale(1)}.modal-header{background:var(--primary-grad);color:#fff;padding:20px;display:flex;justify-content:space-between;align-items:center}.modal-header h3{margin:0;font-size:18px}.modal-close{background:0 0;border:none;color:#fff;font-size:24px;cursor:pointer;padding:0;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:background-color .2s ease}.modal-close:hover{background:rgba(255,255,255,.2)}.modal-body{padding:20px;max-height:60vh;overflow-y:auto}.modal-footer{padding:15px 20px;border-top:1px solid rgba(0,0,0,.1);display:flex;gap:10px;justify-content:flex-end}.config-section{margin-bottom:25px}.config-section h4{margin:0 0 15px 0;color:#333;font-size:14px;font-weight:600}.preset-buttons{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:15px}.preset-buttons .btn{padding:12px;font-size:12px;text-align:left}.config-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px}.config-item{display:flex;flex-direction:column}.config-item label{font-weight:600;margin-bottom:5px;color:#333;font-size:12px}.config-item input,.config-item select{padding:8px 12px;border:2px solid #e1e5e9;border-radius:8px;font-size:12px;transition:all .3s ease}.config-item input:focus,.config-item select:focus{outline:none;border-color:#667eea;box-shadow:0 0 0 3px rgba(102,126,234,.1)}
+        
+        .exporting-pdf body{background:#fff!important}.exporting-pdf .header,.exporting-pdf .info-section,.exporting-pdf .table-container{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:none!important;background:#fff!important;border:1px solid #ccc}.exporting-pdf h1,.exporting-pdf h2,.exporting-pdf label{color:#000!important}.exporting-pdf .controls,.exporting-pdf .modal-overlay,.exporting-pdf .startup-modal-overlay{display:none!important}.exporting-pdf *{transition:none!important}
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+</head>
+<body>
+    <input type="file" id="fileLoader" accept=".json" style="display: none;">
+
+    <div class="startup-modal-overlay" id="startupModal">
+        <div class="startup-modal">
+            <h2>Configuración Inicial</h2>
+            <div class="form-field">
+                <label for="initialTecnico">Nombre del Técnico</label>
+                <input type="text" id="initialTecnico" placeholder="Ingresa tu nombre completo" required>
+            </div>
+            <div class="mode-selection">
+                <h3>Selecciona el Modo de Prueba</h3>
+                <div class="mode-buttons">
+                    <button class="btn btn-secondary" onclick="startApp('simple')">Sirenas Simples</button>
+                    <button class="btn btn-secondary" onclick="startApp('sandwich')">Modo Sándwich</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-container" id="app-container">
+        <div class="header"><h1>🚨 CHECK LIST DE SIRENAS Y BOCINAS</h1><h2 id="testModeTitle"></h2></div>
+        <div class="info-section">
+            <div class="form-grid">
+                <div class="form-field"><label>📅 Fecha</label><input type="date" id="fecha"></div>
+                <div class="form-field"><label>👤 Técnico</label><input type="text" id="tecnico" readonly></div>
+                <div class="form-field"><label>🏢 Empresa</label><input type="text" id="empresa" placeholder="Nombre de empresa"></div>
+                <div class="form-field"><label>🏗️ Edificio</label><input type="text" id="edificio" placeholder="Nombre del edificio"></div>
+                <div class="form-field"><label>🕐 Inicio</label><input type="time" id="horaInicio"></div>
+                <div class="form-field"><label>🕐 Fin</label><input type="time" id="horaFin"></div>
+            </div>
+        </div>
+        <div class="controls">
+            <button class="btn btn-primary" onclick="showConfigModal()">⚙️ Configurar Tabla</button>
+            <button class="btn btn-primary" onclick="exportToPDF()">📄 Exportar a PDF</button>
+            <button class="btn btn-secondary" onclick="saveToFile()">💾 Guardar Archivo</button>
+            <button class="btn btn-secondary" onclick="loadFromFile()">📁 Cargar Archivo</button>
+        </div>
+        <div class="table-container"><table id="mainTable"><thead></thead><tbody id="tableBody"></tbody></table></div>
+    </div>
+
+    <div class="modal-overlay" id="configModal">
+        <div class="modal">
+            <div class="modal-header"><h3>⚙️ Configurar Edificio y Equipos</h3><button class="modal-close" onclick="closeConfigModal()">&times;</button></div>
+            <div class="modal-body">
+                <div class="config-section"><h4>📋 Plantillas Predefinidas</h4><div class="preset-buttons"><button class="btn btn-secondary" onclick="loadPreset('small')">🏢 Edificio Pequeño (1-10)</button><button class="btn btn-secondary" onclick="loadPreset('medium')">🏬 Edificio Mediano (1-20)</button><button class="btn btn-secondary" onclick="loadPreset('large')">🏗️ Edificio Grande (1-30)</button><button class="btn btn-secondary" onclick="loadPreset('custom')">✏️ Personalizado</button></div></div>
+                <div class="config-section">
+                    <h4>🔧 Configuración Manual</h4>
+                    <div class="config-grid">
+                        <div class="config-item"><label>Piso más alto:</label><input type="number" id="pisoMax" value="23" min="1"></div>
+                        <div class="config-item"><label>Piso más bajo:</label><input type="text" id="pisoMin" value="PB" placeholder="Ej: 1, S1, PB"></div>
+                        <div class="config-item"><label>¿Tiene Mezanine?</label><select id="mezanine"><option value="no">No</option><option value="si">Sí</option></select></div>
+                        <div class="config-item"><label>¿Tiene Sótanos?</label><select id="sotanos" onchange="toggleSotanosConfig()"><option value="no">No</option><option value="si">Sí</option></select></div>
+                        <div class="config-item" id="sotanosConfig" style="display: none;"><label>Número de sótanos:</label><input type="number" id="numSotanos" value="1" min="1"></div>
+                        <div class="config-item"><label>¿Tiene Área Social?</label><select id="areaSocial"><option value="no">No</option><option value="si">Sí</option></select></div>
+                        <div class="config-item"><label>¿Tiene Sirenas?</label><select id="hasSirenas"><option value="si">Sí</option><option value="no">No</option></select></div>
+                        <div class="config-item"><label>¿Tiene Bocinas?</label><select id="hasBocinas"><option value="si">Sí</option><option value="no">No</option></select></div>
+                        <div class="config-item"><label>¿Tiene Luces?</label><select id="hasLuces"><option value="si">Sí</option><option value="no">No</option></select></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-secondary" onclick="closeConfigModal()">Cancelar</button><button class="btn btn-primary" onclick="generateTable()">Generar Tabla</button></div>
+        </div>
+    </div>
+
+    <script>
+        let testMode = '', tecnicoName = '', pisos = [], currentConfig = {}, sortableInstance;
+
+        function startApp(mode) {
+            tecnicoName = document.getElementById('initialTecnico').value.trim();
+            if (!tecnicoName) { alert('Por favor, ingresa tu nombre para continuar.'); return; }
+            testMode = mode;
+            document.getElementById('startupModal').style.display = 'none';
+            document.getElementById('app-container').style.display = 'block';
+            document.getElementById('tecnico').value = tecnicoName;
+            document.getElementById('testModeTitle').innerText = testMode === 'simple' ? 'Prueba de Sirenas Simples' : 'Modo Sándwich';
+            const now = new Date();
+            document.getElementById('fecha').valueAsDate = now;
+            document.getElementById('horaInicio').value = now.toTimeString().slice(0, 5);
+            document.getElementById('fileLoader').addEventListener('change', handleFileLoad);
+        }
+
+        function showConfigModal(){ document.getElementById('configModal').classList.add('show'); }
+        function closeConfigModal(){ document.getElementById('configModal').classList.remove('show'); }
+        function toggleSotanosConfig() {
+            document.getElementById('sotanosConfig').style.display = document.getElementById('sotanos').value === 'si' ? 'flex' : 'none';
+        }
+
+        function loadPreset(type) {
+            const presets = {
+                'small': { pisoMin: '1', pisoMax: 10, mezanine: 'no', sotanos: 'no', numSotanos: 1, areaSocial: 'no' },
+                'medium': { pisoMin: '1', pisoMax: 20, mezanine: 'si', sotanos: 'si', numSotanos: 2, areaSocial: 'si' },
+                'large': { pisoMin: '1', pisoMax: 30, mezanine: 'si', sotanos: 'si', numSotanos: 3, areaSocial: 'si' },
+                'custom': { pisoMin: 'PB', pisoMax: 23, mezanine: 'no', sotanos: 'no', numSotanos: 1, areaSocial: 'no' }
+            };
+            const preset = presets[type];
+            if(preset) Object.keys(preset).forEach(key => { if(document.getElementById(key)) document.getElementById(key).value = preset[key]; });
+            toggleSotanosConfig();
+        }
+
+        function generateTable() {
+            currentConfig = {
+                pisoMin: document.getElementById('pisoMin').value.trim(), pisoMax: parseInt(document.getElementById('pisoMax').value),
+                mezanine: document.getElementById('mezanine').value === 'si', sotanos: document.getElementById('sotanos').value === 'si',
+                numSotanos: parseInt(document.getElementById('numSotanos').value), areaSocial: document.getElementById('areaSocial').value === 'si',
+                hasSirenas: document.getElementById('hasSirenas').value === 'si', hasBocinas: document.getElementById('hasBocinas').value === 'si',
+                hasLuces: document.getElementById('hasLuces').value === 'si'
+            };
+            pisos = generatePisos();
+            const tableHead = document.querySelector('#mainTable thead'), tableBody = document.querySelector('#mainTable tbody');
+            tableHead.innerHTML = ''; tableBody.innerHTML = '';
+            if(sortableInstance) sortableInstance.destroy();
+            testMode === 'simple' ? generateSimpleTable(tableHead, tableBody) : generateSandwichTable(tableHead, tableBody);
+            sortableInstance = new Sortable(tableBody, { handle: '.sortable-handle', animation: 150, onEnd: updateRowNumbers });
+            closeConfigModal();
+        }
+        
+        function generatePisos() {
+            const { pisoMin, pisoMax, mezanine, sotanos, numSotanos, areaSocial } = currentConfig;
+            const p = [];
+            if (sotanos) for (let i = numSotanos; i >= 1; i--) p.push(`S${i}`);
+            p.push('PB');
+            if (mezanine) p.push('Mezanine');
+            let startPiso = parseInt(pisoMin) || 1;
+            for (let i = startPiso; i <= pisoMax; i++) p.push(i.toString());
+            if (areaSocial) p.push('Área Social');
+            return [...new Set(p)];
+        }
+
+        function getSelectedDeviceColumns() {
+            const cols = [];
+            if (currentConfig.hasSirenas) cols.push({ key: 'sirena_ok', label: '🔊 Sirena' });
+            if (currentConfig.hasBocinas) cols.push({ key: 'bocina_ok', label: '🔊 Bocina' });
+            if (currentConfig.hasLuces) cols.push({ key: 'luz_ok', label: '💡 Luz' });
+            return cols;
+        }
+
+        function generateSimpleTable(head, body) {
+            const r1 = head.insertRow(), cols = getSelectedDeviceColumns();
+            r1.innerHTML = `<th class="col-numero" rowspan="2">N°<br>Prueba</th><th class="col-piso" rowspan="2">Piso<br>Activado</th>`;
+            if (cols.length > 0) r1.innerHTML += `<th colspan="${cols.length}">Checklist</th>`;
+            r1.innerHTML += `<th class="col-observaciones" rowspan="2">Observaciones</th>`;
+            const r2 = head.insertRow();
+            cols.forEach(c => r2.innerHTML += `<th class="col-checklist">${c.label}</th>`);
+            pisos.forEach((p, i) => {
+                let html = `<td class="n-prueba col-numero">${i + 1}</td><td class="piso-activado sortable-handle col-piso">${p}</td>`;
+                cols.forEach(() => html += `<td class="checkbox-cell"><input type="checkbox"></td>`);
+                html += `<td class="observaciones-cell col-observaciones"><input type="text" placeholder="..."></td>`;
+                body.insertRow().innerHTML = html;
+            });
+        }
+        
+        function generateSandwichTable(head, body) {
+            const r1 = head.insertRow(), cols = getSelectedDeviceColumns();
+            r1.innerHTML = `<th class="col-numero" rowspan="2">N°<br>Prueba</th><th class="col-piso" rowspan="2">Piso<br>Activado</th>`;
+            if (cols.length > 0) ['PISO -1', 'PISO ACTUAL', 'PISO +1'].forEach(title => r1.innerHTML += `<th colspan="${cols.length}">${title}</th>`);
+            r1.innerHTML += `<th class="col-observaciones" rowspan="2">Observaciones</th>`;
+            const r2 = head.insertRow();
+            ['', '', ''].forEach(() => cols.forEach(c => r2.innerHTML += `<th class="col-checklist">${c.label}</th>`));
+            pisos.forEach((p, i) => {
+                let html = `<td class="n-prueba col-numero">${i + 1}</td><td class="piso-activado sortable-handle col-piso">${p}</td>`;
+                ['', '', ''].forEach(() => cols.forEach(() => html += `<td class="checkbox-cell"><input type="checkbox"></td>`));
+                html += `<td class="observaciones-cell col-observaciones"><input type="text" placeholder="..."></td>`;
+                body.insertRow().innerHTML = html;
+            });
+        }
+
+        function getTableData() {
+            const data = [], cols = getSelectedDeviceColumns();
+            document.querySelectorAll('#tableBody tr').forEach(row => {
+                const cells = row.cells; let cellIndex = 2;
+                const rowData = { numero_prueba: cells[0].innerText, piso_activado: cells[1].innerText };
+                if (testMode === 'simple') {
+                    rowData.checklist = {};
+                    cols.forEach(c => rowData.checklist[c.key] = cells[cellIndex++].querySelector('input').checked);
+                } else {
+                    ['minus1', 'actual', 'plus1'].forEach(loc => {
+                        rowData[loc] = {};
+                        cols.forEach(c => rowData[loc][c.key] = cells[cellIndex++].querySelector('input').checked);
+                    });
+                }
+                rowData.observaciones = cells[cellIndex].querySelector('input').value;
+                data.push(rowData);
+            });
+            return data;
+        }
+
+        function generateTableWithData(data) {
+            generateTable();
+            document.querySelectorAll('#tableBody tr').forEach((row, index) => {
+                const rowData = data[index]; if (!rowData) return;
+                let cellIndex = 2; const cols = getSelectedDeviceColumns();
+                if (testMode === 'simple') {
+                    cols.forEach(c => row.cells[cellIndex++].querySelector('input').checked = rowData.checklist[c.key]);
+                } else {
+                    ['minus1', 'actual', 'plus1'].forEach(loc => {
+                        cols.forEach(c => row.cells[cellIndex++].querySelector('input').checked = rowData[loc][c.key]);
+                    });
+                }
+                row.cells[cellIndex].querySelector('input').value = rowData.observaciones;
+            });
+        }
+        
+        function updateRowNumbers() { document.querySelectorAll('#tableBody tr').forEach((r, i) => r.cells[0].innerText = i + 1); }
+        
+        function saveToFile() {
+            const state = {
+                version: "1.0", tecnicoName, testMode,
+                info: { fecha: document.getElementById('fecha').value, empresa: document.getElementById('empresa').value, edificio: document.getElementById('edificio').value, horaInicio: document.getElementById('horaInicio').value, horaFin: document.getElementById('horaFin').value, },
+                config: currentConfig, tableData: getTableData()
+            };
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([JSON.stringify(state, null, 2)], {type: 'application/json'}));
+            a.download = `progreso_checklist_${state.info.edificio || 'edificio'}_${state.info.fecha}.json`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }
+
+        function loadFromFile() { document.getElementById('fileLoader').click(); }
+
+        function handleFileLoad(event) {
+            const file = event.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const state = JSON.parse(e.target.result);
+                    // Restaurar estado
+                    tecnicoName = state.tecnicoName; testMode = state.testMode; currentConfig = state.config;
+                    // Restaurar UI
+                    document.getElementById('tecnico').value = tecnicoName;
+                    document.getElementById('testModeTitle').innerText = testMode === 'simple' ? 'Prueba de Sirenas Simples' : 'Modo Sándwich';
+                    Object.keys(state.info).forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = state.info[id]; });
+                    Object.keys(state.config).forEach(id => {
+                        const el = document.getElementById(id); if(!el) return;
+                        el.value = typeof state.config[id] === 'boolean' ? (state.config[id] ? 'si' : 'no') : state.config[id];
+                    });
+                    toggleSotanosConfig();
+                    generateTableWithData(state.tableData);
+                    alert('Progreso cargado con éxito.');
+                } catch (err) { alert('Error: El archivo no es válido.'); console.error(err); }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // Permitir cargar el mismo archivo de nuevo
+        }
+
+        function exportToPDF() {
+            document.body.classList.add('exporting-pdf');
+            html2pdf().from(document.getElementById('app-container')).set({
+                margin: 5, filename: `Checklist_${document.getElementById('edificio').value || 'Edificio'}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            }).save().then(() => document.body.classList.remove('exporting-pdf'));
+        }
+    </script>
+if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+          .then(registration => {
+            console.log('SW registrado con éxito:', registration);
+          })
+          .catch(error => {
+            console.error('Fallo en el registro del SW:', error);
+          });
+      });
+    }
+</script>	
+</body>
+</html>
